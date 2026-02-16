@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analyse Exploratoire Favikon — Audit LinkedIn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 10px; scroll-behavior: smooth; }
+body {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f8fafc;
+  color: #334155;
+  line-height: 1.65;
+  font-size: 1.5rem;
+}
+a { text-decoration: none; color: inherit; }
+:root {
+  --purple-50: #f5f3ff; --purple-100: #ede9fe; --purple-200: #ddd6fe;
+  --purple-300: #c4b5fd; --purple-400: #a78bfa; --purple-500: #8b5cf6;
+  --purple-600: #6443ea; --purple-700: #5436ce; --purple-800: #432da4;
+  --red-500: #ef4444; --red-600: #dc2626;
+  --green-500: #22c55e; --green-600: #16a34a;
+  --amber-500: #f59e0b; --amber-600: #d97706;
+  --blue-500: #3b82f6; --blue-600: #2563eb;
+  --slate-50: #f8fafc; --slate-100: #f1f5f9; --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1; --slate-400: #94a3b8; --slate-500: #64748b;
+  --slate-600: #475569; --slate-700: #334155; --slate-800: #1e293b; --slate-900: #0f172a;
+  --gradient-business: linear-gradient(135deg, #6443ea, #a855f7);
+  --gradient-accent: linear-gradient(135deg, #6443ea, #ec4899);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.1);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(100,67,234,0.04);
+}
+
+/* Animations */
+@keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes pulse-soft { 0%,100% { box-shadow: 0 0 0 0 rgba(100,67,234,0); } 50% { box-shadow: 0 0 0 6px rgba(100,67,234,0.08); } }
+.anim { opacity:0; transform:translateY(24px); transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1); }
+.anim.visible { opacity:1; transform:translateY(0); }
+
+/* Top Nav - simplified */
+.top-nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:rgba(255,255,255,0.92); backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--slate-200);
+  padding:1.2rem 3rem; display:flex; align-items:center; justify-content:space-between;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+.top-nav .logo { font-size:2rem; font-weight:700; background:var(--gradient-business); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.top-nav .nav-left { display:flex; align-items:center; gap:2rem; }
+.top-nav .nav-right { display:flex; align-items:center; gap:1.2rem; }
+.back-btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.6rem 1.4rem; border-radius:8px; font-size:1.2rem; font-weight:500; color:var(--purple-600); background:var(--purple-50); border:1px solid var(--purple-200); transition:all 0.2s; }
+.back-btn:hover { background:var(--purple-600); color:#fff; }
+.home-btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.6rem 1.4rem; border-radius:8px; font-size:1.2rem; font-weight:500; color:var(--slate-600); background:var(--slate-50); border:1px solid var(--slate-200); transition:all 0.2s; }
+.home-btn:hover { background:var(--slate-800); color:#fff; }
+
+/* Side Navigation - left */
+.side-nav {
+  position:fixed; top:50%; left:2rem; transform:translateY(-50%);
+  z-index:99; display:flex; flex-direction:column; gap:0.3rem;
+}
+.side-nav a {
+  display:flex; align-items:center; gap:0.8rem;
+  padding:0.6rem 1.2rem; border-radius:10px;
+  font-size:1.15rem; font-weight:500; color:var(--slate-400);
+  text-decoration:none; transition:all 0.25s; position:relative;
+  white-space:nowrap;
+}
+.side-nav a .nav-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--slate-300); transition:all 0.25s; flex-shrink:0;
+}
+.side-nav a .nav-label {
+  opacity:0; transform:translateX(-6px);
+  transition:all 0.25s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;
+}
+.side-nav a:hover .nav-label,
+.side-nav a.active .nav-label {
+  opacity:1; transform:translateX(0);
+}
+.side-nav a:hover {
+  color:var(--purple-600);
+}
+.side-nav a:hover .nav-dot {
+  background:var(--purple-400); transform:scale(1.3);
+}
+.side-nav a.active {
+  color:var(--purple-600); font-weight:600;
+}
+.side-nav a.active .nav-dot {
+  background:var(--purple-600); transform:scale(1.5);
+  box-shadow:0 0 0 3px rgba(100,67,234,0.15);
+}
+/* Glass bg on hover */
+.side-nav::before {
+  content:''; position:absolute; inset:-1.2rem -1rem;
+  background:rgba(255,255,255,0.75); backdrop-filter:blur(12px);
+  border-radius:16px; border:1px solid var(--slate-200);
+  box-shadow:var(--shadow-sm); z-index:-1;
+  opacity:0; transition:opacity 0.3s;
+}
+.side-nav:hover::before { opacity:1; }
+
+@media(max-width:1400px) {
+  .side-nav { left:0.8rem; }
+  .side-nav a { padding:0.5rem 0.8rem; font-size:1.1rem; }
+}
+@media(max-width:1100px) {
+  .side-nav { display:none; }
+}
+
+/* Hero */
+.hero {
+  margin-top:5.6rem; padding:8rem 3rem 5rem;
+  background: linear-gradient(160deg, #f8fafc 0%, #ede9fe 40%, #f5f3ff 70%, #fff 100%);
+  text-align:center; position:relative; overflow:hidden;
+}
+.hero::before { content:''; position:absolute; top:5%; left:50%; transform:translateX(-50%); width:900px; height:900px; background:radial-gradient(circle, rgba(100,67,234,0.06) 0%, transparent 55%); border-radius:50%; }
+.hero h1 { font-size:4.4rem; font-weight:800; color:var(--slate-900); line-height:1.15; position:relative; z-index:2; }
+.hero h1 em { font-style:normal; background:var(--gradient-business); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.hero .sub { font-size:1.8rem; color:var(--slate-500); margin-top:1.6rem; max-width:700px; margin-left:auto; margin-right:auto; position:relative; z-index:2; }
+.hero-tag { display:inline-flex; gap:0.6rem; padding:0.6rem 1.6rem; border-radius:999px; background:var(--purple-50); border:1px solid var(--purple-200); color:var(--purple-600); font-size:1.2rem; font-weight:600; margin-bottom:2rem; }
+
+/* Container */
+.container { max-width:1200px; margin:0 auto; padding:0 3rem; }
+
+/* Sections */
+section { padding:6rem 0; }
+.section-header { margin-bottom:4rem; }
+.section-num { font-size:1.1rem; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; color:var(--purple-500); margin-bottom:0.8rem; }
+.section-title { font-size:3rem; font-weight:700; color:var(--slate-900); line-height:1.2; }
+.section-desc { font-size:1.5rem; color:var(--slate-500); margin-top:1rem; max-width:700px; }
+.section-desc strong { color:var(--slate-700); }
+.divider { width:60px; height:3px; background:var(--gradient-business); border-radius:99px; margin:2rem 0; }
+
+/* Page Embed (iframe-like) */
+.page-embed-wrapper {
+  position:relative; border-radius:16px; overflow:hidden;
+  border:1px solid var(--slate-200);
+  background:#fff; margin:2.4rem 0;
+  box-shadow:var(--shadow-lg);
+  transition: all 0.3s;
+}
+.page-embed-wrapper:hover { border-color:var(--purple-300); box-shadow: 0 16px 40px rgba(100,67,234,0.1); }
+.page-embed-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:1rem 2rem; background:var(--slate-50);
+  border-bottom:1px solid var(--slate-200);
+}
+.page-embed-header .filename { font-size:1.2rem; color:var(--slate-500); font-weight:500; font-family:monospace; }
+.page-embed-header .open-link { font-size:1.1rem; color:var(--purple-600); font-weight:600; transition:color 0.2s; }
+.page-embed-header .open-link:hover { color:var(--purple-800); }
+.page-embed-frame {
+  width:100%; height:600px; border:none; background:#fff;
+  transform-origin: top left;
+}
+.page-embed-frame.tall { height:800px; }
+.page-embed-frame.short { height:450px; }
+
+/* Annotation overlays */
+.page-embed-wrapper .annotations {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  pointer-events:none; z-index:10;
+}
+.annotation {
+  position:absolute; pointer-events:auto;
+  background:rgba(255,255,255,0.96); backdrop-filter:blur(8px);
+  border:1px solid var(--purple-300); border-radius:12px;
+  padding:1.2rem 1.6rem; max-width:280px;
+  box-shadow:var(--shadow-lg);
+}
+.annotation .a-title { font-size:1.2rem; font-weight:700; color:var(--purple-600); margin-bottom:0.4rem; }
+.annotation .a-text { font-size:1.1rem; color:var(--slate-600); line-height:1.5; }
+
+/* Audit Cards */
+.audit-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:2rem; }
+.audit-card {
+  background:#fff; border:1px solid var(--slate-200);
+  border-radius:16px; padding:2.4rem; transition:all 0.3s;
+  position:relative; overflow:hidden;
+  box-shadow:var(--shadow-card);
+}
+.audit-card::before {
+  content:''; position:absolute; top:0; left:0; width:100%; height:3px;
+  background:var(--gradient-business); opacity:0; transition:opacity 0.3s;
+}
+.audit-card:hover { border-color:var(--purple-300); transform:translateY(-3px); box-shadow:var(--shadow-lg); }
+.audit-card:hover::before { opacity:1; }
+.audit-card .card-icon { font-size:2.8rem; margin-bottom:1.2rem; }
+.audit-card h3 { font-size:1.7rem; font-weight:600; color:var(--slate-800); margin-bottom:0.8rem; }
+.audit-card p { font-size:1.3rem; color:var(--slate-500); }
+.audit-card .metric { font-size:2.4rem; font-weight:700; margin-top:1rem; background:var(--gradient-business); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+
+/* Insight boxes */
+.insight-box {
+  background:linear-gradient(135deg, rgba(100,67,234,0.04), rgba(168,85,247,0.03));
+  border:1px solid var(--purple-200); border-radius:12px;
+  padding:2rem 2.4rem; margin:2rem 0; position:relative;
+}
+.insight-box::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--gradient-business); border-radius:4px 0 0 4px; }
+.insight-box .insight-label { font-size:1.1rem; font-weight:700; color:var(--purple-600); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem; }
+.insight-box p { font-size:1.4rem; color:var(--slate-600); }
+.insight-box strong { color:var(--slate-800); }
+
+/* Tag */
+.tag { display:inline-flex; padding:0.4rem 1.2rem; border-radius:999px; font-size:1.1rem; font-weight:500; border:1px solid; }
+.tag.purple { background:var(--purple-50); border-color:var(--purple-200); color:var(--purple-600); }
+.tag.red { background:#fef2f2; border-color:#fecaca; color:var(--red-600); }
+.tag.green { background:#f0fdf4; border-color:#bbf7d0; color:var(--green-600); }
+.tag.amber { background:#fffbeb; border-color:#fde68a; color:var(--amber-600); }
+
+/* Data rows */
+.data-row { display:flex; align-items:center; padding:1rem 0; border-bottom:1px solid var(--slate-100); }
+.data-row:last-child { border-bottom:none; }
+.data-row .label { flex:1; font-size:1.3rem; color:var(--slate-500); }
+.data-row .value { font-size:1.4rem; font-weight:600; color:var(--slate-800); }
+.data-row .bar { flex:2; height:6px; background:var(--slate-100); border-radius:99px; margin:0 1.6rem; overflow:hidden; }
+.data-row .bar .fill { height:100%; border-radius:99px; background:var(--gradient-business); transition: width 1s cubic-bezier(.22,1,.36,1); }
+
+/* Two columns */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:3rem; align-items:start; }
+@media(max-width:900px) { .two-col, .audit-grid, .bf-factors { grid-template-columns:1fr; } #constats .container > div[style*="grid-template-columns"] { grid-template-columns:1fr !important; } }
+
+/* Score pyramid */
+.pyramid { display:flex; flex-direction:column; align-items:center; gap:0.5rem; }
+.pyramid-level {
+  display:flex; align-items:center; justify-content:center; gap:1rem;
+  padding:1rem 2rem; border-radius:10px; color:#fff; font-weight:600;
+  transition:all 0.3s; cursor:default; font-size:1.3rem;
+  box-shadow:var(--shadow-sm);
+}
+.pyramid-level:hover { transform:scale(1.04); filter:brightness(1.1); }
+.pyramid-level .rank { font-size:1.8rem; font-weight:800; opacity:0.85; }
+
+/* Brand Fit Gauge */
+.bf-hero {
+  background:#fff;
+  border:1px solid var(--slate-200); border-radius:20px;
+  padding:3.5rem; position:relative; overflow:hidden;
+  box-shadow:var(--shadow-lg);
+}
+.bf-hero::before { content:''; position:absolute; top:-60%; right:-10%; width:400px; height:400px; background:radial-gradient(circle, rgba(244,34,86,0.04) 0%, transparent 65%); border-radius:50%; }
+.bf-hero::after { content:''; position:absolute; bottom:-40%; left:-5%; width:300px; height:300px; background:radial-gradient(circle, rgba(100,67,234,0.04) 0%, transparent 65%); border-radius:50%; }
+.gauge-wrapper { display:flex; align-items:center; gap:4rem; position:relative; z-index:2; }
+@media(max-width:800px) { .gauge-wrapper { flex-direction:column; text-align:center; } }
+.gauge-visual { text-align:center; flex-shrink:0; }
+.gauge-circle {
+  width:180px; height:180px; border-radius:50%; position:relative;
+  background:conic-gradient(var(--red-500) 0deg, var(--red-500) 25.2deg, var(--slate-100) 25.2deg);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 8px 30px rgba(239,68,68,0.15);
+}
+.gauge-circle::before { content:''; position:absolute; inset:12px; border-radius:50%; background:#fff; }
+.gauge-inner { position:relative; z-index:2; text-align:center; }
+.gauge-pct { font-size:4rem; font-weight:800; color:var(--red-500); line-height:1; }
+.gauge-label { font-size:1.1rem; color:var(--slate-400); margin-top:0.2rem; }
+.gauge-status { display:inline-flex; padding:0.5rem 1.4rem; border-radius:99px; font-size:1.2rem; font-weight:600; margin-top:1.2rem; background:#fef2f2; border:1px solid #fecaca; color:var(--red-600); }
+.gauge-info { flex:1; }
+.gauge-info h3 { font-size:2.4rem; font-weight:700; color:var(--slate-900); margin-bottom:1rem; }
+.gauge-info p { font-size:1.4rem; color:var(--slate-600); line-height:1.7; }
+
+/* Brand Fit Factors */
+.bf-factors { display:grid; grid-template-columns:repeat(4, 1fr); gap:1.5rem; margin-top:2.5rem; }
+@media(max-width:900px) { .bf-factors { grid-template-columns:1fr 1fr; } }
+.bf-factor {
+  background:#fff; border:1px solid var(--slate-200);
+  border-radius:14px; padding:2rem; text-align:center; position:relative;
+  transition:all 0.3s; box-shadow:var(--shadow-sm);
+}
+.bf-factor:hover { border-color:var(--purple-300); transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.bf-factor .factor-pct { font-size:2.8rem; font-weight:800; margin-bottom:0.5rem; line-height:1; }
+.bf-factor .factor-name { font-size:1.2rem; font-weight:600; color:var(--slate-700); text-transform:uppercase; letter-spacing:0.05em; }
+.bf-factor .factor-desc { font-size:1.1rem; color:var(--slate-500); margin-top:0.6rem; line-height:1.5; }
+.bf-factor .factor-bar { width:100%; height:4px; background:var(--slate-100); border-radius:99px; margin-top:1rem; overflow:hidden; }
+.bf-factor .factor-bar .fbfill { height:100%; border-radius:99px; transition:width 1.2s cubic-bezier(.22,1,.36,1); }
+
+/* Constat boxes */
+.constat {
+  background:#fff; border-radius:16px; overflow:hidden;
+  border:1px solid var(--slate-200); transition:all 0.3s;
+  box-shadow:var(--shadow-card);
+}
+.constat:hover { border-color:var(--purple-300); box-shadow:var(--shadow-lg); }
+.constat-header { padding:2rem 2.4rem 1rem; display:flex; align-items:flex-start; gap:1.2rem; }
+.constat-icon { font-size:2.4rem; flex-shrink:0; width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+.constat-icon.red { background:#fef2f2; }
+.constat-icon.amber { background:#fffbeb; }
+.constat-icon.green { background:#f0fdf4; }
+.constat-icon.blue { background:#eff6ff; }
+.constat-meta { flex:1; }
+.constat-type { font-size:1rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem; }
+.constat-type.red { color:var(--red-500); }
+.constat-type.amber { color:var(--amber-600); }
+.constat-type.green { color:var(--green-600); }
+.constat-type.blue { color:var(--blue-600); }
+.constat h3 { font-size:1.6rem; font-weight:600; color:var(--slate-800); }
+.constat-body { padding:0 2.4rem 2rem; }
+.constat-obs, .constat-reco { padding:1.2rem 1.6rem; border-radius:10px; margin-top:1rem; }
+.constat-obs { background:var(--slate-50); }
+.constat-reco { background:var(--purple-50); border:1px solid var(--purple-100); }
+.constat-obs .cl, .constat-reco .cl { font-size:1rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.4rem; }
+.constat-obs .cl { color:var(--slate-400); }
+.constat-reco .cl { color:var(--purple-600); }
+.constat-obs p, .constat-reco p { font-size:1.3rem; color:var(--slate-600); line-height:1.6; }
+
+/* Extension KPI strip */
+.kpi-strip { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:1.2rem; margin:2rem 0; }
+.kpi-item {
+  background:#fff; border:1px solid var(--slate-200);
+  border-radius:12px; padding:1.4rem 1.6rem; text-align:center;
+  transition:all 0.3s; box-shadow:var(--shadow-sm);
+}
+.kpi-item:hover { border-color:var(--purple-300); box-shadow:var(--shadow-md); }
+.kpi-val { font-size:2rem; font-weight:700; color:var(--slate-800); line-height:1.2; }
+.kpi-name { font-size:1.1rem; color:var(--slate-500); margin-top:0.3rem; }
+
+/* Footer */
+.report-footer { padding:4rem 3rem; text-align:center; background:#fff; border-top:1px solid var(--slate-200); }
+.report-footer .logo-ft { font-size:2.2rem; font-weight:700; background:var(--gradient-business); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:1rem; }
+.report-footer p { color:var(--slate-500); font-size:1.2rem; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:8px; }
+::-webkit-scrollbar-track { background:var(--slate-50); }
+::-webkit-scrollbar-thumb { background:var(--purple-400); border-radius:99px; }
+::-webkit-scrollbar-thumb:hover { background:var(--purple-600); }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="nav-left">
+    <a href="index.html" style="text-decoration:none;"><span class="logo">Favikon</span></a>
+    <span style="font-size:1.2rem;color:var(--slate-300)">·</span>
+    <span style="font-size:1.2rem;color:var(--slate-400);font-weight:500;">Analyse Exploratoire</span>
+  </div>
+  <div class="nav-right">
+    <a href="index.html" class="home-btn">🏠 Accueil</a>
+    <a href="profil-createur.htm" class="back-btn">← Retour Profil</a>
+  </div>
+</nav>
+
+<!-- SIDE NAV - Left -->
+<nav class="side-nav" id="sideNav">
+  <a href="#extension" data-section="extension"><span class="nav-dot"></span><span class="nav-label">Extension</span></a>
+  <a href="#brandfit" data-section="brandfit"><span class="nav-dot"></span><span class="nav-label">Brand Fit</span></a>
+  <a href="#constats" data-section="constats"><span class="nav-dot"></span><span class="nav-label">Constats</span></a>
+  <a href="#profil" data-section="profil"><span class="nav-dot"></span><span class="nav-label">Profil</span></a>
+  <a href="#scoring" data-section="scoring"><span class="nav-dot"></span><span class="nav-label">Scoring</span></a>
+  <a href="#xray" data-section="xray"><span class="nav-dot"></span><span class="nav-label">X-Ray</span></a>
+  <a href="#ranking" data-section="ranking"><span class="nav-dot"></span><span class="nav-label">Ranking</span></a>
+  <a href="#audience" data-section="audience"><span class="nav-dot"></span><span class="nav-label">Audience</span></a>
+  <a href="#performance" data-section="performance"><span class="nav-dot"></span><span class="nav-label">Performance</span></a>
+  <a href="#content" data-section="content"><span class="nav-dot"></span><span class="nav-label">Contenu</span></a>
+  <a href="#collab" data-section="collab"><span class="nav-dot"></span><span class="nav-label">Collabs</span></a>
+  <a href="#audit" data-section="audit"><span class="nav-dot"></span><span class="nav-label">Synthèse</span></a>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-tag">🔍 Rapport Exploratoire</div>
+  <h1>Audit LinkedIn via <em>Favikon</em></h1>
+  <p class="sub">Exploration complète des fonctionnalités de Favikon pour auditer un profil LinkedIn — avec visualisation directe des pages de l'outil</p>
+</header>
+
+<!-- ====================== SECTION 1: EXTENSION LINKEDIN ====================== -->
+<section id="extension">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">01 · Point d'entrée</div>
+      <h2 class="section-title">Extension LinkedIn — Première Analyse</h2>
+      <div class="divider"></div>
+      <p class="section-desc">L'extension Chrome Favikon s'active directement sur un profil LinkedIn. C'est le premier niveau d'analyse, qui révèle instantanément les KPIs clés sans quitter la plateforme.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 linkedin-extension.htm</span>
+        <a href="linkedin-extension.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="linkedin-extension.htm" class="page-embed-frame tall" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <!-- KPI Strip -->
+    <div class="kpi-strip anim">
+      <div class="kpi-item">
+        <div class="kpi-val" style="color:var(--slate-400);">Nobody</div>
+        <div class="kpi-name">Rang Favikon</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-val">20.97</div>
+        <div class="kpi-name">Score / 25 000</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-val" style="color:var(--red-500);">7%</div>
+        <div class="kpi-name">Brand Fit</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-val" style="color:var(--red-500);">0%</div>
+        <div class="kpi-name">Engagement</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-val">1 314</div>
+        <div class="kpi-name">Followers LinkedIn</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-val">$422</div>
+        <div class="kpi-name">Prix estimé / post</div>
+      </div>
+    </div>
+
+    <div class="two-col anim">
+      <div class="insight-box" style="margin:0;">
+        <div class="insight-label">🎯 Point d'intérêt audit — Extension</div>
+        <p>L'extension révèle un profil en <strong>phase de construction</strong> : Score 20.97 sur 25 000, Rang "Nobody". C'est un profil avec un <strong>potentiel inexploité</strong> — 1 314 followers LinkedIn, une niche identifiée (Digital Marketing), un statut "Verified", mais un engagement à 0%. L'extension donne un <strong>diagnostic instantané</strong> sans quitter LinkedIn.</p>
+      </div>
+      <div>
+        <h3 style="color:var(--slate-800);font-size:1.5rem;margin-bottom:1.2rem;">Données Extension</h3>
+        <div class="data-row"><span class="label">Profil</span><span class="value">Mattéo Selva</span></div>
+        <div class="data-row"><span class="label">Statut</span><span class="value"><span class="tag green">Verified</span></span></div>
+        <div class="data-row"><span class="label">Niche</span><span class="value"><span class="tag purple">Digital Marketing</span></span></div>
+        <div class="data-row"><span class="label">Pays · Langue</span><span class="value">France · Français</span></div>
+        <div class="data-row"><span class="label">Marketing & Sales</span><span class="value">Top 87% · #6 843</span></div>
+        <div class="data-row"><span class="label">Digital Marketing</span><span class="value">#1 607</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 2: BRAND FIT DEEP-DIVE ====================== -->
+<section id="brandfit" style="background:#fff;">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">02 · Indicateur décisionnel</div>
+      <h2 class="section-title">Focus : Brand Fit</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Le Brand Fit est <strong>l'indicateur le plus important pour les entreprises</strong>. Il mesure le degré de compatibilité entre un créateur et une marque. Voici comment il fonctionne.</p>
+    </div>
+
+    <!-- Brand Fit Gauge Hero -->
+    <div class="bf-hero anim">
+      <div class="gauge-wrapper">
+        <div class="gauge-visual">
+          <div class="gauge-circle">
+            <div class="gauge-inner">
+              <div class="gauge-pct">7%</div>
+              <div class="gauge-label">Brand Fit</div>
+            </div>
+          </div>
+          <div class="gauge-status">⚠ Poor Match</div>
+        </div>
+        <div class="gauge-info">
+          <h3>Compatibilité Marque × Créateur</h3>
+          <p>Le Brand Fit est un score de <strong>0 à 100%</strong> qui évalue si l'audience d'un créateur correspond à la cible d'une marque. Il croise <strong>4 facteurs pondérés</strong> : la pertinence thématique, la qualité de l'audience, le niveau d'engagement, et la sécurité de marque.</p>
+          <p style="margin-top:1rem;">Un score de <strong>7%</strong> signifie un <strong>décalage majeur</strong> entre le profil et la marque analysée. Pour une campagne d'influence, c'est un signal d'alerte : ce créateur ne correspond pas aux critères de la marque cible.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Facteurs -->
+    <div class="bf-factors anim">
+      <div class="bf-factor">
+        <div class="factor-pct" style="color:var(--purple-600);">~35%</div>
+        <div class="factor-name">Thématique</div>
+        <div class="factor-desc">Les sujets du créateur sont-ils alignés avec le secteur de la marque ?</div>
+        <div class="factor-bar"><div class="fbfill" style="width:35%;background:var(--purple-500);"></div></div>
+      </div>
+      <div class="bf-factor">
+        <div class="factor-pct" style="color:var(--blue-600);">~25%</div>
+        <div class="factor-name">Audience</div>
+        <div class="factor-desc">Les followers du créateur matchent-ils la cible démographique de la marque ?</div>
+        <div class="factor-bar"><div class="fbfill" style="width:25%;background:#3b82f6;"></div></div>
+      </div>
+      <div class="bf-factor">
+        <div class="factor-pct" style="color:var(--green-600);">~25%</div>
+        <div class="factor-name">Qualité</div>
+        <div class="factor-desc">L'engagement est-il authentique ? Les followers sont-ils actifs et réels ?</div>
+        <div class="factor-bar"><div class="fbfill" style="width:25%;background:#22c55e;"></div></div>
+      </div>
+      <div class="bf-factor">
+        <div class="factor-pct" style="color:var(--amber-600);">~15%</div>
+        <div class="factor-name">Sécurité</div>
+        <div class="factor-desc">Le créateur représente-t-il un risque réputationnel pour la marque ?</div>
+        <div class="factor-bar"><div class="fbfill" style="width:15%;background:#f59e0b;"></div></div>
+      </div>
+    </div>
+
+    <!-- Explications -->
+    <div class="two-col anim" style="margin-top:3rem;">
+      <div class="insight-box" style="margin:0;border-color:#fecaca;">
+        <div class="insight-label" style="color:var(--red-500);">❌ Pourquoi le score est faible (7%)</div>
+        <p style="margin-bottom:0.8rem;">→ <strong>Thématique divergente</strong> : Le créateur parle de SEO/Marketing automation, ce qui ne correspond pas au secteur de la marque auditrice.</p>
+        <p style="margin-bottom:0.8rem;">→ <strong>Audience restreinte</strong> : Seulement 1 314 followers — volume trop faible pour un overlap significatif avec la cible.</p>
+        <p style="margin-bottom:0.8rem;">→ <strong>Engagement nul (0%)</strong> : Aucune interaction détectée sur les publications — signale une audience passive ou du contenu non publié.</p>
+        <p>→ <strong>Score 20.97 / 25 000</strong> : Le profil n'a pas encore atteint la masse critique d'influence.</p>
+      </div>
+      <div>
+        <div class="insight-box" style="margin:0;background:linear-gradient(135deg, rgba(34,197,94,0.05), rgba(100,67,234,0.03));border-color:#bbf7d0;">
+          <div class="insight-label" style="color:var(--green-600);">📊 Grille de lecture Brand Fit</div>
+          <div style="margin-top:0.8rem;">
+            <div class="data-row"><span class="label">80 – 100%</span><span class="value"><span class="tag green">Excellent Match</span></span></div>
+            <div class="data-row"><span class="label">60 – 79%</span><span class="value"><span class="tag green" style="background:#f0fdf4;">Good Match</span></span></div>
+            <div class="data-row"><span class="label">40 – 59%</span><span class="value"><span class="tag amber">Fair Match</span></span></div>
+            <div class="data-row"><span class="label">25 – 39%</span><span class="value"><span class="tag amber" style="background:#fffbeb;">Weak Match</span></span></div>
+            <div class="data-row"><span class="label">0 – 24%</span><span class="value"><span class="tag red">Poor Match ← Ici</span></span></div>
+          </div>
+          <p style="margin-top:1rem;font-size:1.2rem;">Un Brand Fit &lt; 25% est un <strong>signal "No-Go"</strong> immédiat pour une campagne d'influence.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 3: CONSTATS D'AUDIT ====================== -->
+<section id="constats">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">03 · Livrable client</div>
+      <h2 class="section-title">Constats d'Audit — Éléments Exploitables</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Synthèse des observations et recommandations à présenter au client, structurées en constats actionnables.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;" class="anim">
+      <!-- Constat 1 : Alerte -->
+      <div class="constat">
+        <div class="constat-header">
+          <div class="constat-icon red">🚨</div>
+          <div class="constat-meta">
+            <div class="constat-type red">Alerte</div>
+            <h3>Engagement à 0%</h3>
+          </div>
+        </div>
+        <div class="constat-body">
+          <div class="constat-obs">
+            <div class="cl">Observation</div>
+            <p>Le taux d'engagement est de <strong style="color:var(--slate-800);">0%</strong> malgré une base de 1 314 followers. L'extension Favikon ne détecte aucune interaction significative sur les publications récentes.</p>
+          </div>
+          <div class="constat-reco">
+            <div class="cl">Recommandation</div>
+            <p>Mettre en place une stratégie de <strong style="color:var(--slate-800);">Community Building</strong> : répondre aux commentaires, initier des conversations, publier des contenus incitatifs (sondages, questions ouvertes, carrousels). Objectif : atteindre 1-3% d'engagement sous 3 mois.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Constat 2 : Avertissement -->
+      <div class="constat">
+        <div class="constat-header">
+          <div class="constat-icon amber">⚠️</div>
+          <div class="constat-meta">
+            <div class="constat-type amber">Avertissement</div>
+            <h3>Positionnement Thématique Flou</h3>
+          </div>
+        </div>
+        <div class="constat-body">
+          <div class="constat-obs">
+            <div class="cl">Observation</div>
+            <p>Le Brand Fit de <strong style="color:var(--slate-800);">7%</strong> révèle un décalage entre les topics détectés (SEO, Marketing Automation) et ce que recherchent les marques. Le positionnement n'est pas suffisamment clair pour attirer des collaborations.</p>
+          </div>
+          <div class="constat-reco">
+            <div class="cl">Recommandation</div>
+            <p>Recentrer la ligne éditoriale sur <strong style="color:var(--slate-800);">2 piliers thématiques forts</strong> et les maintenir sur 6 mois minimum. Créer un territoire de marque personnelle identifiable par les algorithmes de Favikon.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Constat 3 : Positif -->
+      <div class="constat">
+        <div class="constat-header">
+          <div class="constat-icon green">✅</div>
+          <div class="constat-meta">
+            <div class="constat-type green">Positif</div>
+            <h3>Profil Vérifié & Classé</h3>
+          </div>
+        </div>
+        <div class="constat-body">
+          <div class="constat-obs">
+            <div class="cl">Observation</div>
+            <p>Le profil est <strong style="color:var(--slate-800);">Verified</strong> par Favikon et apparaît dans les classements : <strong style="color:var(--slate-800);">#1 607 en Digital Marketing</strong>, <strong style="color:var(--slate-800);">Top 87% en Marketing & Sales</strong>. Cela signifie que l'infrastructure de crédibilité est en place.</p>
+          </div>
+          <div class="constat-reco">
+            <div class="cl">Recommandation</div>
+            <p>Capitaliser sur ce statut vérifié. Viser le <strong style="color:var(--slate-800);">Top 50%</strong> en Marketing & Sales sous 6 mois via une fréquence de publication de 3-4x/semaine et un engagement proactif sur les publications de son réseau.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Constat 4 : Opportunité -->
+      <div class="constat">
+        <div class="constat-header">
+          <div class="constat-icon blue">💡</div>
+          <div class="constat-meta">
+            <div class="constat-type blue">Opportunité</div>
+            <h3>Potentiel de Monétisation</h3>
+          </div>
+        </div>
+        <div class="constat-body">
+          <div class="constat-obs">
+            <div class="cl">Observation</div>
+            <p>L'extension estime le prix à <strong style="color:var(--slate-800);">$422/post</strong> pour un profil "Nobody" avec 0% d'engagement. Ce pricing reflète un potentiel sous-exploité — en comparaison, Anthony Bourbon (score 7 851) est estimé à <strong style="color:var(--slate-800);">$5 702/post</strong>.</p>
+          </div>
+          <div class="constat-reco">
+            <div class="cl">Recommandation</div>
+            <p>Avant de chercher à monétiser, <strong style="color:var(--slate-800);">construire la preuve sociale</strong> : augmenter l'engagement, atteindre 5 000 followers, et réaliser 2-3 collaborations qualitatives (même gratuites) pour faire monter le score et le pricing.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Résumé exécutif -->
+    <div class="insight-box anim" style="margin-top:3rem;background:linear-gradient(135deg, rgba(59,130,246,0.04), rgba(100,67,234,0.03));border-color:#bfdbfe;">
+      <div class="insight-label" style="color:var(--blue-600);">📋 Résumé Exécutif — Pour le Client</div>
+      <p style="font-size:1.5rem;line-height:1.8;">Le profil audité présente un <strong>potentiel réel mais inexploité</strong>. Le score Favikon de 20.97/25 000 et le rang "Nobody" indiquent une phase de démarrage. Les leviers prioritaires sont : <strong>(1)</strong> augmenter l'engagement de 0% à 2%+, <strong>(2)</strong> clarifier le positionnement thématique pour améliorer le Brand Fit, <strong>(3)</strong> publier régulièrement pour monter dans les classements. Le profil est vérifié et classé — le socle est là, il manque l'exécution.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 4: PROFIL CRÉATEUR ====================== -->
+<section id="profil" style="background:#fff;">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">04 · Page explorée</div>
+      <h2 class="section-title">Profil Créateur</h2>
+      <div class="divider"></div>
+      <p class="section-desc">La page principale de Favikon pour un créateur. Elle agrège les données LinkedIn, la couverture sociale, le score et les KPIs clés.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 profil-createur.htm</span>
+        <a href="profil-createur.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="profil-createur.htm" class="page-embed-frame tall" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="insight-box anim">
+      <div class="insight-label">🎯 Point d'intérêt audit</div>
+      <p>La page profil créateur permet d'évaluer en un coup d'œil la <strong>couverture sociale complète</strong> du profil LinkedIn : nombre de followers, réseaux connectés, score Favikon, niche sectorielle et résumé IA. C'est le <strong>point d'entrée principal</strong> pour tout audit de profil.</p>
+    </div>
+
+    <div class="audit-grid anim">
+      <div class="audit-card">
+        <div class="card-icon">📊</div>
+        <h3>Social Coverage</h3>
+        <p>Vue consolidée de tous les réseaux sociaux liés au profil LinkedIn — permet de mesurer la présence cross-platform du créateur.</p>
+      </div>
+      <div class="audit-card">
+        <div class="card-icon">🏅</div>
+        <h3>Favikon Score</h3>
+        <p>Score propriétaire calculé par l'IA — indicateur synthétique de la pertinence et de l'influence globale du profil.</p>
+        <div class="metric">7 851 pts</div>
+      </div>
+      <div class="audit-card">
+        <div class="card-icon">🏷️</div>
+        <h3>Niche & Catégories</h3>
+        <p>Classification automatique du profil par secteur d'activité — crucial pour qualifier la pertinence thématique.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 5: SCORING ====================== -->
+<section id="scoring">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">05 · Page explorée</div>
+      <h2 class="section-title">Système de Scoring & Rangs</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Favikon attribue un score basé sur les KPIs du compte et en déduit un rang de 1 (Légende) à 10 (Newcomer). Voici le détail de la page scoring.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 profil-createur-score.htm</span>
+        <a href="profil-createur-score.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="profil-createur-score.htm" class="page-embed-frame tall" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="two-col anim">
+      <div>
+        <div class="insight-box" style="margin-top:0;">
+          <div class="insight-label">🎯 Point d'intérêt audit</div>
+          <p>Le scoring Favikon ne se limite pas au volume de followers. Il intègre <strong>l'engagement, la régularité, la pertinence thématique et l'authenticité</strong> pour définir un rang qui reflète la vraie influence. Pour un audit, c'est le <strong>benchmark principal</strong>.</p>
+        </div>
+        <div style="margin-top:2rem;">
+          <h3 style="font-size:1.6rem;color:var(--slate-800);margin-bottom:1.2rem;">Composition du Score</h3>
+          <div class="data-row">
+            <span class="label">Engagement & Interactions</span>
+            <div class="bar"><div class="fill" style="width:35%"></div></div>
+            <span class="value">~35%</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Audience & Followers</span>
+            <div class="bar"><div class="fill" style="width:25%"></div></div>
+            <span class="value">~25%</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Régularité & Posts</span>
+            <div class="bar"><div class="fill" style="width:20%"></div></div>
+            <span class="value">~20%</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Authenticité & Qualité</span>
+            <div class="bar"><div class="fill" style="width:20%"></div></div>
+            <span class="value">~20%</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:1.6rem;color:var(--slate-800);margin-bottom:1.2rem;">Pyramide des Rangs</h3>
+        <div class="pyramid">
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#ffd700,#ff8c00);width:140px;"><span class="rank">#1</span>Legend<br><small>> 25K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#c0c0c0,#8a8a8a);width:170px;"><span class="rank">#2</span>Outstanding<br><small>15K–25K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#cd7f32,#a0522d);width:200px;"><span class="rank">#3</span>Excellent<br><small>10K–15K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,var(--purple-500),var(--purple-700));width:230px;"><span class="rank">#4</span>Very Good<br><small>7K–10K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#6366f1,#4f46e5);width:260px;"><span class="rank">#5</span>Good<br><small>5K–7K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#3b82f6,#2563eb);width:290px;"><span class="rank">#6</span>Fair<br><small>3K–5K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#06b6d4,#0891b2);width:320px;"><span class="rank">#7</span>Promising<br><small>2K–3K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#22c55e,#16a34a);width:350px;"><span class="rank">#8</span>Growing<br><small>1K–2K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#84cc16,#65a30d);width:380px;"><span class="rank">#9</span>Emerging<br><small>500–1K</small></div>
+          <div class="pyramid-level" style="background:linear-gradient(135deg,#a3a3a3,#737373);width:410px;"><span class="rank">#10</span>Newcomer<br><small>&lt; 500</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 6: X-RAY BUSINESS ====================== -->
+<section id="xray" style="background:#fff;">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">06 · Page explorée</div>
+      <h2 class="section-title">Creator X-Ray — Vue Business</h2>
+      <div class="divider"></div>
+      <p class="section-desc">La vue business "Creator X-Ray" offre une analyse en profondeur du profil. C'est l'outil le plus puissant pour un audit LinkedIn côté entreprise.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 business-overview.htm</span>
+        <a href="business-overview.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="business-overview.htm" class="page-embed-frame tall" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="insight-box anim">
+      <div class="insight-label">🎯 Point d'intérêt audit — Overview</div>
+      <p>La page Overview du Creator X-Ray concentre <strong>toutes les données clés</strong> pour un audit rapide : biographie, topics créateur (Startups & Entrepreneurship, Venture Capital, Business Strategy), badge d'autorité (<strong>"Recognized Authority" — 7 851 pts</strong>), tendance globale (<strong>+56.8% growth, fast</strong>), top rankings par secteur (#32 Startups, #54 Business), et estimation de prix ($5 702). C'est la <strong>page la plus complète pour un audit initial</strong>.</p>
+    </div>
+
+    <div class="audit-grid anim">
+      <div class="audit-card">
+        <div class="card-icon">🧠</div>
+        <h3>Creator Topics</h3>
+        <p>Les sujets identifiés par l'IA à partir du contenu publié.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:1rem;">
+          <span class="tag purple">Startups & Entrepreneurship</span>
+          <span class="tag purple">Venture Capital</span>
+          <span class="tag purple">Business Strategy & Motivation</span>
+        </div>
+      </div>
+      <div class="audit-card">
+        <div class="card-icon">📈</div>
+        <h3>Global Trend</h3>
+        <p>Tendance de croissance du profil — indicateur de dynamique.</p>
+        <div class="metric">+56.8%</div>
+        <span class="tag green" style="margin-top:0.8rem;">↑ Fast growth</span>
+      </div>
+      <div class="audit-card">
+        <div class="card-icon">🏆</div>
+        <h3>Top Rankings Sectoriels</h3>
+        <p>Positionnement dans les classements par niche.</p>
+        <div style="margin-top:1rem;">
+          <div class="data-row"><span class="label">Startups & Entrepreneurship</span><span class="value" style="color:var(--purple-600);">#32</span></div>
+          <div class="data-row"><span class="label">Business & Startups</span><span class="value" style="color:var(--purple-600);">#54</span></div>
+          <div class="data-row"><span class="label">Classement mondial</span><span class="value" style="color:var(--slate-400);">#491</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 7: RANKING ====================== -->
+<section id="ranking">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">07 · Page explorée</div>
+      <h2 class="section-title">Ranking — Top 200 France</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Le classement permet de situer un profil LinkedIn par rapport aux autres créateurs de son pays ou de sa niche. Essentiel pour benchmarker un audit.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 ranking-france.htm</span>
+        <a href="ranking-france.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="ranking-france.htm" class="page-embed-frame" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="insight-box anim">
+      <div class="insight-label">🎯 Point d'intérêt audit — Ranking</div>
+      <p>Le classement Top 200 France permet de <strong>benchmarker le profil audité</strong> contre les meilleurs créateurs du pays. Pour un audit LinkedIn, cela répond à la question : <strong>"Où se situe ce profil dans l'écosystème d'influence français ?"</strong>. Le classement est filtrable par réseau (LinkedIn) et par niche sectorielle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 8: AUDIENCE ====================== -->
+<section id="audience" style="background:#fff;">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">08 · Page explorée</div>
+      <h2 class="section-title">Audience — Crédibilité & Cible</h2>
+      <div class="divider"></div>
+      <p class="section-desc">L'analyse d'audience est l'une des métriques les plus importantes pour un audit LinkedIn. Elle mesure la qualité réelle des followers.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 business-audience.htm</span>
+        <a href="business-audience.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="business-audience.htm" class="page-embed-frame tall" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="two-col anim">
+      <div class="insight-box" style="margin:0;">
+        <div class="insight-label">🎯 Point d'intérêt audit — Audience</div>
+        <p>La page audience révèle la <strong>crédibilité des followers</strong> : 88% Very Good, avec 71% de vrais followers et 13% suspects. Pour un audit LinkedIn, c'est la donnée qui permet de distinguer une <strong>vraie influence</strong> d'un profil gonflé artificiellement.</p>
+      </div>
+      <div>
+        <h3 style="color:var(--slate-800);font-size:1.5rem;margin-bottom:1.2rem;">Données clés Audience</h3>
+        <div class="data-row"><span class="label">Follower Credibility</span><span class="value"><span class="tag green">88% Very Good</span></span></div>
+        <div class="data-row"><span class="label">Real Followers</span><span class="value" style="color:var(--green-600);">71%</span></div>
+        <div class="data-row"><span class="label">Suspects</span><span class="value" style="color:var(--red-500);">13%</span></div>
+        <div class="data-row"><span class="label">Influenceurs</span><span class="value">16%</span></div>
+        <div class="data-row"><span class="label">Genre</span><span class="value">♂ 55% · ♀ 45%</span></div>
+        <div class="data-row"><span class="label">Langues principales</span><span class="value">EN · AR · ES</span></div>
+        <div style="margin-top:1.2rem;">
+          <p style="font-size:1.2rem;color:var(--slate-400);margin-bottom:0.6rem;">Audience Interest Affinity :</p>
+          <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+            <span class="tag amber">Travel & Aviation</span>
+            <span class="tag amber">Photography</span>
+            <span class="tag amber">Sports</span>
+            <span class="tag amber">Food & Grocery</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 9: PERFORMANCE ====================== -->
+<section id="performance">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">09 · Page explorée</div>
+      <h2 class="section-title">Performance Globale</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Vue consolidée des performances cross-platform : followers, engagement, growth et consistance.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 business-performance.htm</span>
+        <a href="business-performance.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="business-performance.htm" class="page-embed-frame" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="insight-box anim">
+      <div class="insight-label">🎯 Point d'intérêt audit — Performance</div>
+      <p>La page Performance décompose les <strong>métriques par réseau</strong> : LinkedIn (565.8K), Instagram (447.2K), TikTok (234.5K), X (14.2K). Les sections <strong>Summary, Growth, Engagement et Consistency</strong> permettent d'évaluer si le profil est actif, en croissance, et génère un engagement réel. Pour l'audit, c'est l'indicateur de <strong>dynamique et de santé</strong> du profil.</p>
+    </div>
+
+    <div class="audit-grid anim">
+      <div class="audit-card">
+        <div class="card-icon">💼</div>
+        <h3>LinkedIn</h3>
+        <div class="metric">565.8K</div>
+        <p style="margin-top:0.6rem;">Réseau principal — plateforme cible de l'audit</p>
+      </div>
+      <div class="audit-card">
+        <div class="card-icon">📸</div>
+        <h3>Instagram</h3>
+        <div class="metric">447.2K</div>
+        <p style="margin-top:0.6rem;">Second réseau — complémentarité B2C</p>
+      </div>
+      <div class="audit-card">
+        <div class="card-icon">🎵</div>
+        <h3>TikTok</h3>
+        <div class="metric">234.5K</div>
+        <p style="margin-top:0.6rem;">Présence vidéo courte — reach jeune audience</p>
+      </div>
+      <div class="audit-card">
+        <div class="card-icon">🐦</div>
+        <h3>X / Twitter</h3>
+        <div class="metric">14.2K</div>
+        <p style="margin-top:0.6rem;">Présence complémentaire — veille sectorielle</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 10: CONTENT ====================== -->
+<section id="content" style="background:#fff;">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">10 · Page explorée</div>
+      <h2 class="section-title">Content Style & Format</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Analyse du style éditorial et des formats de contenu — pour comprendre la stratégie de communication du profil.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 business-content.htm</span>
+        <a href="business-content.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="business-content.htm" class="page-embed-frame" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="two-col anim">
+      <div class="insight-box" style="margin:0;">
+        <div class="insight-label">🎯 Point d'intérêt audit — Contenu</div>
+        <p>Favikon identifie le <strong>Content Style</strong> (Thought Leader) et le <strong>Content Format</strong> préféré du créateur. Pour un audit LinkedIn, c'est essentiel pour comprendre <strong>comment le profil communique</strong>, quel ton il adopte, et quels formats génèrent le plus d'engagement.</p>
+      </div>
+      <div>
+        <h3 style="color:var(--slate-800);font-size:1.5rem;margin-bottom:1.2rem;">Éléments analysés</h3>
+        <div class="data-row"><span class="label">Content Style</span><span class="value"><span class="tag green">Thought Leader</span></span></div>
+        <div class="data-row"><span class="label">Tonalité</span><span class="value">Éducatif · Inspirant</span></div>
+        <div class="data-row"><span class="label">Format dominant</span><span class="value">Posts texte · Carousel</span></div>
+        <div class="data-row"><span class="label">Régularité</span><span class="value"><span class="tag green">Consistent</span></span></div>
+        <div class="data-row"><span class="label">Preview posts</span><span class="value">Disponible ✓</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 11: COLLABORATIONS ====================== -->
+<section id="collab">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">11 · Page explorée</div>
+      <h2 class="section-title">Collaborations & Pricing</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Historique de collaborations, impact, taux de contenu sponsorisé et estimation de prix — données clés pour évaluer la monétisation du profil.</p>
+    </div>
+
+    <div class="page-embed-wrapper anim">
+      <div class="page-embed-header">
+        <span class="filename">📄 business-collaboration.htm</span>
+        <a href="business-collaboration.htm" target="_blank" class="open-link">Ouvrir la page complète →</a>
+      </div>
+      <iframe src="business-collaboration.htm" class="page-embed-frame" loading="lazy" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <div class="two-col anim">
+      <div class="insight-box" style="margin:0;">
+        <div class="insight-label">🎯 Point d'intérêt audit — Collaborations</div>
+        <p>Pour un audit LinkedIn, la page collaborations révèle l'<strong>historique de partenariats</strong> du profil : quelles marques, quel impact, et à quel prix estimé. Le <strong>taux de contenu sponsorisé</strong> (20%) et le <strong>Brand Fit</strong> (16%) sont des indicateurs cruciaux pour évaluer la crédibilité et la commercialité du profil.</p>
+      </div>
+      <div>
+        <h3 style="color:var(--slate-800);font-size:1.5rem;margin-bottom:1.2rem;">Données Collaborations</h3>
+        <div class="data-row"><span class="label">Collaboration Impact</span><span class="value"><span class="tag green">Excellent</span></span></div>
+        <div class="data-row"><span class="label">Taux sponsorisé</span><span class="value"><span class="tag amber">20.00%</span></span></div>
+        <div class="data-row"><span class="label">Prix estimé</span><span class="value" style="color:var(--purple-600);">$5 702</span></div>
+        <div class="data-row"><span class="label">Fourchette</span><span class="value">$4 562 – $6 842</span></div>
+        <div class="data-row"><span class="label">Brand Fit</span><span class="value">16%</span></div>
+        <div style="margin-top:1.2rem;">
+          <p style="font-size:1.2rem;color:var(--slate-400);margin-bottom:0.6rem;">Marques identifiées :</p>
+          <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+            <span class="tag purple">Blast Club</span>
+            <span class="tag purple">Groq</span>
+            <span class="tag purple">NVIDIA</span>
+            <span class="tag purple">Poiscaille</span>
+            <span class="tag purple">Groupe M6</span>
+            <span class="tag purple">La Fabrique à Nuage</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SECTION 12: SYNTHÈSE AUDIT ====================== -->
+<section id="audit" style="background:#fff;">
+  <div class="container">
+    <div class="section-header anim">
+      <div class="section-num">12 · Synthèse</div>
+      <h2 class="section-title">Points d'Intérêt pour l'Audit LinkedIn</h2>
+      <div class="divider"></div>
+      <p class="section-desc">Récapitulatif des éléments clés exploitables pour auditer un profil LinkedIn avec Favikon.</p>
+    </div>
+
+    <div class="audit-grid anim" style="grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));">
+
+      <!-- 1. Audience / Cœur de cible -->
+      <div class="audit-card" style="border-top:3px solid #06b6d4;">
+        <div class="card-icon">👥</div>
+        <h3>Audience / Cœur de Cible</h3>
+        <p>Identifier qui suit réellement le profil et si l'audience correspond à ta cible.</p>
+        <ul style="list-style:none;margin-top:1rem;font-size:1.3rem;color:var(--slate-500);">
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Follower Credibility</strong> : 88% Very Good — l'audience est fiable</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">71% réels / 13% suspects</strong> — ratio de vrais followers</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Genre</strong> : 55% masculin · 45% féminin</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Langues</strong> : EN · AR · ES — profil international</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Intérêts</strong> : Travel, Photo, Sports, Food</li>
+        </ul>
+        <div style="margin-top:1.2rem;"><span class="tag green">Donnée clé pour valider le ciblage</span></div>
+      </div>
+
+      <!-- 2. Top Rankings -->
+      <div class="audit-card" style="border-top:3px solid var(--purple-500);">
+        <div class="card-icon">🏆</div>
+        <h3>Top Rankings — Secteur Cible</h3>
+        <p>Situer le profil par rapport aux meilleurs de son secteur.</p>
+        <ul style="list-style:none;margin-top:1rem;font-size:1.3rem;color:var(--slate-500);">
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">#32</strong> en Startups & Entrepreneurship</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">#54</strong> en Business & Startups</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">#491</strong> classement mondial</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Top 200 France</strong> — benchmark national</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Recognized Authority</strong> — badge 7 851 pts</li>
+        </ul>
+        <div style="margin-top:1.2rem;"><span class="tag purple">Permet de benchmarker vs la concurrence</span></div>
+      </div>
+
+      <!-- 3. Phase type / discours -->
+      <div class="audit-card" style="border-top:3px solid var(--amber-500);">
+        <div class="card-icon">💬</div>
+        <h3>Phase Type du Discours</h3>
+        <p>La thématique dominante qui ressort de l'analyse IA du contenu publié.</p>
+        <ul style="list-style:none;margin-top:1rem;font-size:1.3rem;color:var(--slate-500);">
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Creator Topics</strong> : Startups & Entrepreneurship, Venture Capital, Business Strategy</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Thought Leader</strong> : style identifié par l'IA</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Tonalité</strong> : éducatif, inspirant, orienté action</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Niche claire</strong> : les sujets sont cohérents entre eux</li>
+        </ul>
+        <div style="margin-top:1.2rem;"><span class="tag amber">Révèle le positionnement éditorial réel</span></div>
+      </div>
+
+      <!-- 4. Performance globale -->
+      <div class="audit-card" style="border-top:3px solid #22c55e;">
+        <div class="card-icon">📈</div>
+        <h3>Performance Globale + Visuel</h3>
+        <p>Les métriques cross-platform qui prouvent que le profil fonctionne.</p>
+        <ul style="list-style:none;margin-top:1rem;font-size:1.3rem;color:var(--slate-500);">
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">LinkedIn 565.8K</strong> · Instagram 447.2K · TikTok 234.5K · X 14.2K</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Global Trend +56.8%</strong> — croissance rapide</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Score 7 851 pts</strong> — Rang #4 (Very Good)</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Consistency</strong> : publication régulière confirmée</li>
+        </ul>
+        <div style="margin-top:1.2rem;"><span class="tag green">Données visuelles convaincantes pour un client</span></div>
+      </div>
+
+      <!-- 5. Content Style & Format -->
+      <div class="audit-card" style="border-top:3px solid var(--red-500);">
+        <div class="card-icon">🎨</div>
+        <h3>Content Style & Format Validé</h3>
+        <p>Confirmer que le style et les formats de contenu sont adaptés à la cible.</p>
+        <ul style="list-style:none;margin-top:1rem;font-size:1.3rem;color:var(--slate-500);">
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Content Style</strong> : Thought Leader — posture d'expert</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Formats</strong> : Posts texte, Carousels, Vidéos</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Régularité</strong> : Consistent — fréquence maîtrisée</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Preview posts</strong> : visualisation directe des publications</li>
+        </ul>
+        <div style="margin-top:1.2rem;"><span class="tag red">Valide la stratégie éditoriale</span></div>
+      </div>
+
+      <!-- 6. Collaborations -->
+      <div class="audit-card" style="border-top:3px solid #ec4899;">
+        <div class="card-icon">🤝</div>
+        <h3>Collaborations — Intérêt</h3>
+        <p>Évaluer l'historique et le potentiel de partenariats du profil.</p>
+        <ul style="list-style:none;margin-top:1rem;font-size:1.3rem;color:var(--slate-500);">
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Collaboration Impact</strong> : Excellent</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Prix estimé</strong> : $5 702 (fourchette $4 562 – $6 842)</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Taux sponsorisé</strong> : 20% du contenu</li>
+          <li style="padding:0.5rem 0;">→ <strong style="color:var(--slate-800);">Marques</strong> : Blast Club, NVIDIA, Groq, Groupe M6, Poiscaille</li>
+        </ul>
+        <div style="margin-top:1.2rem;"><span class="tag purple">Montre la crédibilité commerciale</span></div>
+      </div>
+
+    </div>
+
+    <!-- Pages complémentaires -->
+    <div class="anim" style="margin-top:3rem;">
+      <h3 style="color:var(--slate-800);font-size:1.6rem;margin-bottom:1.6rem;">📂 Pages complémentaires explorables</h3>
+      <div class="audit-grid" style="grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));">
+        <a href="profil-createur-posts.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">📝</div>
+          <h3 style="font-size:1.4rem;">Posts du Créateur</h3>
+          <p>Détail des publications</p>
+        </a>
+        <a href="business-authenticity.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">🛡️</div>
+          <h3 style="font-size:1.4rem;">Authenticité</h3>
+          <p>Score de confiance détaillé</p>
+        </a>
+        <a href="analyse-concurrentielle.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">🔄</div>
+          <h3 style="font-size:1.4rem;">Network Watch</h3>
+          <p>Analyse concurrentielle</p>
+        </a>
+        <a href="analyse-position.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">⚖️</div>
+          <h3 style="font-size:1.4rem;">Comparer</h3>
+          <p>Comparaison de profils</p>
+        </a>
+        <a href="hall-of-fame.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">🏛️</div>
+          <h3 style="font-size:1.4rem;">Hall of Fame</h3>
+          <p>Classement élite</p>
+        </a>
+        <a href="achievements.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">🏅</div>
+          <h3 style="font-size:1.4rem;">Achievements</h3>
+          <p>Badges & accomplissements</p>
+        </a>
+        <a href="my-stats-detailed.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">📊</div>
+          <h3 style="font-size:1.4rem;">Stats Détaillées</h3>
+          <p>Métriques approfondies</p>
+        </a>
+        <a href="business-ia-search.htm" target="_blank" class="audit-card" style="cursor:pointer;text-align:center;">
+          <div class="card-icon">🤖</div>
+          <h3 style="font-size:1.4rem;">Recherche IA</h3>
+          <p>Recherche de créateurs</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="report-footer">
+  <div class="logo-ft">Favikon</div>
+  <p>Analyse exploratoire — Audit de profil LinkedIn via Favikon · Février 2026</p>
+  <p style="margin-top:0.6rem;">Profil analysé : Anthony Bourbon (Founder & CEO, Blast Club) · Mattéo Selva</p>
+</footer>
+
+<!-- JS -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Fade-in animations
+  const animObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.anim').forEach(el => animObs.observe(el));
+
+  // Side nav — smooth scroll
+  document.querySelectorAll('.side-nav a, .top-nav a[href^="#"]').forEach(link => {
+    link.addEventListener('click', e => {
+      const href = link.getAttribute('href');
+      if(!href.startsWith('#')) return;
+      e.preventDefault();
+      const t = document.querySelector(href);
+      if(t) t.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  });
+
+  // Side nav — active section tracking
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.side-nav a');
+
+  const sectionObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        navLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('data-section') === id);
+        });
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '-80px 0px -40% 0px' });
+
+  sections.forEach(sec => sectionObs.observe(sec));
+
+  // Stagger grid children
+  document.querySelectorAll('.audit-grid').forEach(grid => {
+    [...grid.children].forEach((c,i) => { c.style.transitionDelay = (i*0.08)+'s'; });
+  });
+});
+</script>
+</body>
+</html>
